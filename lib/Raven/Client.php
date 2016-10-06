@@ -937,7 +937,7 @@ class Raven_Client
         unset($options[CURLOPT_CAINFO]);
         curl_setopt_array($curl, $options);
 
-        curl_exec($curl);
+        $result = curl_exec($curl);
 
         $errno = curl_errno($curl);
         // CURLE_SSL_CACERT || CURLE_SSL_CACERT_BADFILE
@@ -950,7 +950,7 @@ class Raven_Client
         $success = ($code == 200);
         if (!$success) {
             // It'd be nice just to raise an exception here, but it's not very PHP-like
-            $this->_lasterror = curl_error($curl);
+            $this->_lasterror = array('result' => $result, 'last_error' => curl_error($curl), 'http_code' => $code);
         } else {
             $this->_lasterror = null;
         }
