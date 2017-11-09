@@ -1175,9 +1175,9 @@ class Raven_Client
         } else {
             // It'd be nice just to raise an exception here, but it's not very PHP-like
             $this->_lasterror = array(
-            	'result' => $buffer,
-	            'last_error' => curl_error($this->_curl_instance),
-	            'http_code' => $code,
+                'result' => $buffer,
+                'last_error' => curl_error($this->_curl_instance),
+                'http_code' => $code,
             );
             $this->_last_sentry_error = @json_decode($buffer);
         }
