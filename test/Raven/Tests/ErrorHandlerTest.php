@@ -9,9 +9,11 @@
  * file that was distributed with this source code.
  */
 
-class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
+class Raven_Tests_ErrorHandlerTest extends \PHPUnit\Framework\TestCase
 {
     private $errorLevel;
+    private $errorHandlerCalled;
+    private $existingErrorHandler;
 
     public function setUp()
     {
@@ -40,7 +42,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
 
     public function testErrorsAreLoggedAsExceptions()
     {
-        $client = $this->getMock('Client', array('captureException', 'sendUnsentErrors'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException', 'sendUnsentErrors'))
+                       ->getMock();
         $client->expects($this->once())
                ->method('captureException')
                ->with($this->isInstanceOf('ErrorException'));
@@ -51,7 +55,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
 
     public function testExceptionsAreLogged()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->once())
                ->method('captureException')
                ->with($this->isInstanceOf('ErrorException'));
@@ -64,7 +70,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
 
     public function testErrorHandlerPassErrorReportingPass()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->once())
                ->method('captureException');
 
@@ -77,7 +85,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
 
     public function testErrorHandlerPropagates()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->never())
                ->method('captureException');
 
@@ -90,9 +100,52 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($this->errorHandlerCalled, 1);
     }
 
+    public function testExceptionHandlerPropagatesToNative()
+    {
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
+        $client->expects($this->exactly(2))
+               ->method('captureException')
+               ->with($this->isInstanceOf('Exception'));
+
+        $handler = new Raven_ErrorHandler($client);
+        
+        set_exception_handler(null);
+        $handler->registerExceptionHandler(false);
+
+        $testException = new Exception('Test exception');
+
+        $didRethrow = false;
+        try {
+            $handler->handleException($testException);
+        } catch (Exception $e) {
+            $didRethrow = true;
+        }
+
+        $this->assertFalse($didRethrow);
+
+        set_exception_handler(null);
+        $handler->registerExceptionHandler(true);
+
+        $didRethrow = false;
+        $rethrownException = null;
+        try {
+            $handler->handleException($testException);
+        } catch (Exception $e) {
+            $didRethrow = true;
+            $rethrownException = $e;
+        }
+
+        $this->assertTrue($didRethrow);
+        $this->assertSame($testException, $rethrownException);
+    }
+
     public function testErrorHandlerRespectsErrorReportingDefault()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->once())
                ->method('captureException');
 
@@ -111,7 +164,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
     // defer to respecting the error reporting settings.
     public function testSilentErrorsAreNotReportedWithGlobal()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->never())
                ->method('captureException');
 
@@ -130,7 +185,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
     // defer to respecting the error reporting settings.
     public function testSilentErrorsAreNotReportedWithLocal()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->never())
                ->method('captureException');
 
@@ -143,9 +200,23 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
         $handler->handleFatalError();
     }
 
+    public function testShouldCaptureFatalErrorBehavior()
+    {
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
+        $handler = new Raven_ErrorHandler($client);
+
+        $this->assertEquals($handler->shouldCaptureFatalError(E_ERROR), PHP_VERSION_ID < 70000);
+
+        $this->assertEquals($handler->shouldCaptureFatalError(E_WARNING), false);
+    }
+
     public function testErrorHandlerDefaultsErrorReporting()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $client->expects($this->never())
                ->method('captureException');
 
@@ -159,7 +230,9 @@ class Raven_Tests_ErrorHandlerTest extends PHPUnit_Framework_TestCase
 
     public function testFluidInterface()
     {
-        $client = $this->getMock('Client', array('captureException'));
+        $client = $this->getMockBuilder('Client')
+                       ->setMethods(array('captureException'))
+                       ->getMock();
         $handler = new Raven_ErrorHandler($client);
         $result = $handler->registerErrorHandler();
         $this->assertEquals($result, $handler);
